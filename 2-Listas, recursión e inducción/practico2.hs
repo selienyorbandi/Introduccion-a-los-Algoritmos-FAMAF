@@ -2,6 +2,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NPlusKPatterns #-}
+import Distribution.Simple.Utils (xargs)
 {-# HLINT ignore "Use foldr" #-}
 {-# HLINT ignore "Use map" #-}
 
@@ -193,12 +194,181 @@ apellidos [] = []
 apellidos ((_,apellido,_):xs) = apellido : apellidos xs
 --apellidos ((nombre,apellido,edad):xs) = apellido : apellidos xs
 
+-------------------------------------------------------
+--          OPERADORES BÁSICOS SOBRE LISTAS           |
+-------------------------------------------------------
 
---------------Extra--------
+-- # : Cardinal 
+
+cardinal:: [a] -> Int 
+cardinal [] = 0
+cardinal (x:xs) = 1 + cardinal xs
+
+-- ! : Índice - !! en Haskell
+
+indice:: [a] -> Int -> a
+indice [] n = error "Fuera de rango. \n"
+indice (x:xs) 0 = x
+--indice (x:xs) (n+1) = indice xs n
+indice (x:xs) n = indice xs (n-1)
+
+-- ⬆ : Tomar - take en haskell
+tomar:: [a] -> Int -> [a]
+tomar xs 0 = []
+tomar [] n = []
+tomar (x:xs) n = x : tomar xs (n-1)
+
+-- ⬇ : Tirar - drop en haskell
+tirar:: [a] -> Int -> [a]
+tirar [] n = []
+tirar xs 0 = xs
+tirar (x:xs) n = tirar xs (n-1)
+
+-- ++ : Concatenar
+concatenar:: [a] -> [a] -> [a]
+concatenar [] ys = ys
+concatenar (x:xs) ys = x : concatenar xs ys
+
+-- ◀ : Snoc (pegar a la derecha)
+snoc:: [a] -> a -> [a]
+snoc xs x = xs ++ [x]
+
+
+-------------------------------------------------------
+--          MÁS FUNCIONES RECURSIVAS                  |
+-------------------------------------------------------
+
+-- a) maximo : [Int] → Int, que calcula el máximo elemento de una lista de enteros.
+-- Por ejemplo: maximo.[2, 5, 1, 7, 3] = 7
+
+--tipo fold
+maximo:: [Int] -> Int 
+maximo [] = error "No hay maximo del vacio \n"
+maximo [x] = x
+maximo (x:xs) = max x (maximo xs)
+
+-- b) sumaPares : [(Num, Num)] → Num, que dada una lista de pares de números, devuelve la sumatoria
+-- de todos los números de todos los pares.
+-- Por ejemplo: sumaPares.[(1, 2)(7, 8)(11, 0)] = 29
+
+--Tipo fold
+sumaPares :: Num p => [(p, p)] -> p
+sumaPares [] = 0
+sumaPares ((x,y):xs) = x + y + sumaPares xs
+
+-- c) todos0y1 : [Int] → Bool, que dada una lista devuelve True si ésta consiste sólo de 0s y 1s.
+-- Por ejemplo: todos0y1.[1, 0, 1, 2, 0, 1] = False, todos0y1.[1, 0, 1, 0, 0, 1] = True
+
+--Tipo fold
+todos0y1:: [Int] -> Bool 
+todos0y1 [] = error "Esta lista esta vacia, no tiene sentido el calculo \n"
+todos0y1 [x] = x == 0 || x == 1
+todos0y1 (x:xs)
+    | x == 1 || x == 0 = todos0y1 xs
+    | otherwise = False
+
+-- d) quitar0s : [Int] → [Int] que dada una lista de enteros devuelve la lista pero quitando todos los ceros.
+-- Por ejemplo quitar0s.[2, 0, 3, 4] = [2, 3, 4]
+
+--Tipo filter
+quitar0s:: [Int] -> [Int]
+quitar0s [] = []
+quitar0s (x:xs) 
+    | x == 0 = quitar0s xs
+    | x /= 0 = x : quitar0s xs
+
+-- e) ultimo : [A] → A, que devuelve el último elemento de una lista.
+-- Por ejemplo: ultimo.[10, 5, 3, 1] = 1
+
+--Tipo filter
+ultimo:: [a] -> a
+ultimo [] = error "Una lista vacia no tiene ultimo elemento...\n"
+ultimo [x] = x
+ultimo (x:xs) = ultimo xs
+
+-- f) repetir : Num → Num → [Num], que dado un número n mayor o igual a 0 y un número k arbitrario
+-- construye una lista donde k aparece repetido n veces.
+-- Por ejemplo: repetir,3,6 = [6, 6, 6]
+
+-- //! Tipo ______?????? tipo constructor ?¿ xd
+repetir ::  Float -> Int -> [Float]
+repetir _ 0 = []
+repetir n k = n : repetir n (k-1)
+
+-- g) concat : [[A]] → [A] que toma una lista de listas y devuelve la concatenación de todas ellas.
+-- Por ejemplo: concat.[[1, 4], [], [2]] = [1, 4, 2]
+
+--Tipo unzip
+concatListaDeListas:: [[a]] -> [a]
+concatListaDeListas [] = []
+concatListaDeListas (xs:xss) = xs ++ concatListaDeListas xss
+
+-- h) rev : [A] → [A] que toma una lista y devuelve una lista con los mismos elementos pero en orden
+-- inverso.
+-- Por ejemplo: rev.[1, 2, 3] = [3, 2, 1]
+
+--Tipo map
+rev:: [a] -> [a]
+rev [] = []
+rev (x:xs) = rev xs ++ [x]
+
+--------------Extra---------------------------------------
+
+-- a) listasIguales : [A] → [A] → Bool, que determina si dos listas son iguales, es decir, contienen los
+-- mismos elementos en las mismas posiciones respectivamente.
+-- Por ejemplo: listasIguales.[1, 2, 3].[1, 2, 3] = True, listasIguales.[1, 2, 3, 4].[1, 3, 2, 4] = False
+
+--Tipo fold
+listasIguales :: Eq a => [a] -> [a] -> Bool
+listasIguales [][] = True
+listasIguales [x] [y] = x == y 
+listasIguales (x:xs)(y:ys)
+    | length (x:xs) /= length (y:ys) = False 
+    | x == y = listasIguales xs ys
+    | x /= y = False
+
+-- b) mejorNota : [(String,Int,Int,Int)] → [(String,Int)], que selecciona la nota más alta de cada alumno.
+-- Por ejemplo: mejorNota.[(“Matias”,7,7,8),(“Juan”,10,6,9),(“Lucas”,2,10,10)] =
+-- [(“Matias”,8),(“Juan”,10),(“Lucas”,10)].
+
+--Tipo unzip
+mejorNota:: [(String,Int,Int,Int)] -> [(String,Int)]
+mejorNota [] = []
+mejorNota ((alumno,nota1,nota2,nota3):xs) = (alumno, max nota1 (max nota2 nota3)) : mejorNota xs
+
+
+-- c) incPrim : [(Int,Int)] → [(Int,Int)], que dada una lista de pares de enteros, le suma 1 al primer
+-- número de cada par.
+-- Por ejemplo: incPrim.[(20, 5),(50, 9)] = [(21, 5),(51, 9)], incPrim.[(4, 11),(3, 0)] = [(5, 11),(4, 0)].
+
+--Tipo map
+incPrim:: [(Int,Int)]->[(Int,Int)]
+incPrim [] = []
+incPrim ((a,b):xs) = (succ a, b) : incPrim xs
+
+-- d) expandir : String → String, pone espacios entre cada letra de una palabra.
+-- Por ejemplo: expandir."hola" = "h o l a" (¡sin espacio al final!).
+
+--Tipo map
+expandir:: String -> String
+expandir "" = ""
+expandir [x] = [x]
+expandir (x:xs) = (x : " ") ++ expandir xs
+
+--------------------------------------------
 
 sumaListas:: [[Int]] -> [Int]
 sumaListas [[]] = [0]
 sumaListas (xs: xss) = sum xs : sumaListas xss
 
+ordena :: Ord b => [(b, b)] -> [(b, b)]
+ordena [] = []
+ordena ((x,y) : xs) 
+    | x >= y = (y,x) : ordena xs
+    | x < y = (x,y) : ordena xs
 
-
+cambiarVporB :: [Char] -> [Char]
+cambiarVporB "" = ""
+cambiarVporB (x:xs)
+    | x == 'v' = 'b' : cambiarVporB xs
+    | x /= 'v' = x : cambiarVporB xs
